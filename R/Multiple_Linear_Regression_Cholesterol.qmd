@@ -1,0 +1,379 @@
+---
+title: "Multiple linear regression - Cholesterol"
+format: html
+editor: visual
+---
+
+## =============================================================================
+
+## MHEDAS
+
+## Biomedical Statistics
+
+## Multiple linear regression
+
+## Outcome: cholesterol (C)
+
+## Explanatory variables: height in cm (H); Weight in Kg (W); Age in years (A)
+
+## Main concepts: confounders and Collinearity
+
+## =============================================================================
+
+## Load libraries
+
+## -----------------------------------------------------------------------------
+
+```{r}
+library(car) # Linear modeling
+library(HH)  # Data display
+```
+
+## Read data
+
+## -----------------------------------------------------------------------------
+
+```{r}
+dd <- read.csv2("cholesterol.csv") # dataset
+n  <- dim(dd)[1]                   # sample size
+head(dd)
+```
+
+## Descriptive plot
+
+## -----------------------------------------------------------------------------
+
+HH package sp()
+
+```{r}
+sp(C ~ W, boxplot=F, smooth=F, dd)
+```
+
+relationship looks wrong (weight, cholesterol) -\> check for confounders
+
+## Null model
+
+## -----------------------------------------------------------------------------
+
+```{r}
+mod0 <- lm(C~1,dd) #simple model
+summary(mod0)
+```
+
+```{r}
+
+## Simple linear regression with weight 
+## -----------------------------------------------------------------------------
+mod <- lm(C ~ W, dd)# Fit the model with weight, simple model
+summary(mod)        # Summary of the model
+anova(mod0,mod)     # Test Omnibus to check if the model explains something on the outcome
+```
+
+cholesterol goes down with higher weight
+
+## Predictions
+
+## -----------------------------------------------------------------------------
+
+```{r}
+CC <- predict(mod, interval="confidence", alpha=0.01)  # Expected value, avarege of all
+CP <- predict(mod, interval="prediction", alpha=0.01)  # Point prediction, one individual observation
+```
+
+## -- Plot
+
+```{r}
+O <- order(dd$W)                                     # Order
+plot(dd$W,dd$C,ylim=c(min(CP,dd$C),max(CP,dd$C)),
+     ylab="C",xlab="P",main="99% prediction bands")  # Points
+
+lines(dd$W[O],CC[O,"fit"],lty=2,col="blue")          # Point estimate
+
+lines(dd$W[O],CC[O,"lwr"],lty=2,col="blue")          # Lower limit confidence interval
+lines(dd$W[O],CC[O,"upr"],lty=2,col="blue")          # Upper limit confidence interval
+
+lines(dd$W[O],CP[O,"lwr"],lty=2,col="red")           # Lower limit prediction interval
+lines(dd$W[O],CP[O,"upr"],lty=2,col="red")           # Upper limit prediction interval
+```
+
+## -- Alternative plot
+
+```{r}
+ci.plot(mod,conf.level=.99) 
+```
+
+## Validation
+
+## -----------------------------------------------------------------------------
+
+##-- Linearity and homoscedasticity
+
+```{r}
+plot(predict(mod),resid(mod),main="Residuals vs Predicted values")
+abline(h=0,lty=2)
+```
+
+##-- Normality of the residuals
+
+```{r}
+qqnorm(resid(mod))
+qqline(resid(mod),col=2)
+```
+
+##-- Outliers
+
+```{r}
+plot(rstudent(mod),main="Studentized Residuals")
+abline(h=c(-3,-2,0,2,3),lty=2)
+```
+
+one observation is very high, far away
+
+##-- Influential observations (Cook's distance)
+
+```{r}
+plot(mod,4)
+abline(h = 4/nrow(dd), lty=2, col='grey')
+```
+
+one observation has a very high influence
+
+##-- Influential observations (dffits is an alternative measure of the influence)
+
+```{r}
+p <- 2
+plot(dffits(mod),main="dffits")
+abline(h=c(-3,-2,0,2,3)*sqrt(p/n),lty=2)
+```
+
+##-- All in one
+
+```{r}
+par(mfrow=c(2,2))
+plot(mod)
+```
+
+## Problem with the interpretation
+
+checking counfounders \## -----------------------------------------------------------------------------
+
+```{r}
+scatterplot(C~W|A,smooth=F,boxplots=F,col=1:12,dd)
+```
+
+-   one symbol = one age
+-   almost all regression lines = positive slopes
+-   ages are causing overall neg slope
+
+## Multiple linear regression with all variables
+
+## -----------------------------------------------------------------------------
+
+##-- Fit the model
+
+```{r}
+mod3v <- lm(C ~ W + A + H,dd)
+summary(mod3v)
+```
+
+coefficient of W = positive
+
+##-- Test significance
+
+```{r}
+anova(mod3v)   # Sequential relevance (Anova Type I)
+```
+
+order as order of variables in the model
+
+```{r}
+Anova(mod3v)   # Marginal relevance   (Anova type II) 
+```
+
+\`\*´= relevant variable
+
+##-- Collinearity
+
+```{r}
+vif(mod3v)
+```
+
+## Validation
+
+## -----------------------------------------------------------------------------
+
+##-- Linearity and homoscedasticity
+
+```{r}
+plot(predict(mod3v),resid(mod3v),main="Residuals vs Predicted values")
+abline(h=0,lty=2)
+```
+
+##-- Normality of the residuals
+
+```{r}
+qqnorm(resid(mod3v))
+qqline(resid(mod3v),col=2)
+```
+
+##-- Outliers
+
+```{r}
+plot(rstudent(mod3v),main="Studentized Residuals")
+abline(h=c(-3,-2,0,2,3),lty=2)
+```
+
+##-- Influential observations (Cook's distance)
+
+```{r}
+plot(mod3v,4)
+abline(h = 4/nrow(dd), lty=2, col='grey')
+```
+
+##-- All in one
+
+```{r}
+par(mfrow=c(2,2))
+plot(mod3v)
+```
+
+## Dealing with collinearity --\> Create variable EW: excess weight
+
+defined by expert: \## Ideal weight = 0.5 \* height - 10 \## ----------------------------------------------------------------------------- \# New variable include info of weight and height
+
+```{r}
+real_weight  <- dd$W
+ideal_weight <- dd$H/2 - 10
+dd$EW <- pmax(0, real_weight - ideal_weight)
+```
+
+## Multiple linear regression with excess weight
+
+## -----------------------------------------------------------------------------
+
+```{r}
+modE2v <- lm(C ~ EW + A, dd)
+summary(modE2v)
+```
+
+## Comparing predictions
+
+## -----------------------------------------------------------------------------
+
+##-- Comparing (absolute/relative) predictions
+
+```{r}
+par(mfrow=c(1,2))
+plot(predict(mod3v) - predict(modE2v),
+     main="Absolute differences \n in predictions")
+abline(h=0,lt=2)
+plot((predict(mod3v) - predict(modE2v))/predict(mod3v),
+     main="Relative differences \n in predictions")
+abline(h=0,lt=2)
+```
+
+##-- Comparing residual standard deviation
+
+```{r}
+(res_sd <- c(summary(mod3v)$sigma,
+             summary(modE2v)$sigma))
+```
+
+##-- Comparing coefficients
+
+```{r}
+rbind(coef(mod3v),c(coef(modE2v),NA))
+```
+
+NA = independence; solved problem of collinearity
+
+##-- Tests significance
+
+```{r}
+anova(modE2v)   # Sequential contribution
+```
+
+```{r}
+Anova(modE2v)   # Marginal contribution
+```
+
+##-- Collinearity
+
+```{r}
+vif(modE2v)          
+```
+
+## Validation
+
+## -----------------------------------------------------------------------------
+
+##-- All in one
+
+```{r}
+par(mfrow=c(2,2))
+plot(modE2v)
+```
+
+```{r}
+residualPlots(modE2v)
+```
+
+## Predictions
+
+## -----------------------------------------------------------------------------
+
+##-- Prediction according to age for patients without excess of weight
+
+```{r}
+age  <- 9:20
+C1   <- data.frame(cbind(A=age,EW=0))              # Individual characteristics
+CC1  <- predict(modE2v, C1, interval="confidence") # 95% Confidence intervals
+CP1  <- predict(modE2v, C1, interval="prediction") # 95% Prediction intervals
+
+##-- Plot
+par(mfrow=c(1,1))
+plot (age,CC1[,"fit"],ty="l",ylim=c(min(CP1),max(CP1)),
+      main="95% Prediction band for cholesterol 95% \n w/o excess of weight")
+
+lines(age,CC1[,"lwr"],lty=2,col="blue")
+lines(age,CC1[,"upr"],lty=2,col="blue")
+
+lines(age,CP1[,"lwr"],lty=2,col="red")
+lines(age,CP1[,"upr"],lty=2,col="red")
+```
+
+blue = average with 95% confidence for all people in the world
+
+##-- Prediction for a patient with W=65, A=15 i H=150
+
+```{r}
+C0 <- data.frame(cbind(EW=c(max(0,65-(150/2-10))), A=c(15)))
+predict(modE2v, C0, interval="confidence", level=.95) # confidence interval
+predict(modE2v, C0, interval="prediction", level=.95) # prediction interval
+```
+
+## Contrasts
+
+## -----------------------------------------------------------------------------
+
+##-- Contrast if E\[C\]=190 for the previous individual with W=65, A=15 i H=150 optipon. 0 = see if value could be 190 -\> no cause it is is outside CI \# 1st option: manual
+
+```{r}
+pC <- predict(modE2v,C0,se.fit=T)
+2*(1 - pt((pC$fit-190)/pC$se.fit, pC$df)) # p value
+```
+
+\<0.05 = significant difference to predicted average (200.043)
+
+# 2nd option: "linearHypothesis" function
+
+```{r}
+linearHypothesis(modE2v,c(1,0,15),190)
+```
+
+# 3rd option: "lht" function
+
+```{r}
+lht(modE2v,c(1,0,15),190)
+((pC$fit-190)/pC$se.fit)^2
+```
