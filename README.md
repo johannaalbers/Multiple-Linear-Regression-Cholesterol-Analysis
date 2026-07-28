@@ -156,6 +156,11 @@ The model was used to:
 - ANOVA (Type I & Type II)
 
 ---
+## Reproducing this analysis
+
+pip install -r requirements.txt
+
+---
 
 ## Skills Demonstrated
 
