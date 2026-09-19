@@ -95,7 +95,7 @@ Strong collinearity between anthropometric variables was detected.
 
 ## Feature Engineering to Address Collinearity
 
-To reduce collinearity, a new variable was constructed:
+To reduce collinearity, a new variable was used, with the ideal-weight formula supplied by the course:
 
 Excess Weight (EW)
 
